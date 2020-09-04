@@ -87,6 +87,10 @@ def use():
     max_code = np.max(code)
     min_code = np.min(code)
     code = (code - min_code) / (max_code - min_code)
+    # 对noise进行一次预处理
+    max_noise = np.max(noise)
+    min_noise = np.min(noise)
+    noise = (noise - min_noise) / (max_noise - min_noise)
     # 让code与噪声进行对比
     plot_code = code.squeeze()
     plot_noise: np.ndarray = noise

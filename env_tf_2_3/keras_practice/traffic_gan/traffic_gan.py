@@ -92,15 +92,18 @@ def createTrafficGAN(g_model: keras.Model, e_model: keras.Model, traffic_dim: in
 class Trainer(keras.callbacks.Callback):
     trafficGan: keras.Model
     g_model: keras.Model
+    e_model: keras.Model
     classifer_model: keras.Model
     losses: list
 
-    def __init__(self, trafficGan: keras.Model, g_model: keras.Model, classifer_model: keras.Model, noise_dim: int,
+    def __init__(self, trafficGan: keras.Model, g_model: keras.Model, e_model: keras.Model,
+                 classifer_model: keras.Model, noise_dim: int,
                  batch_size: int = 64, class_num: int = 23):
         super().__init__()
         self.trafficGan = trafficGan
         self.classifer_model = classifer_model
         self.g_model = g_model
+        self.e_model = e_model
         self.losses = []
         self.noise_dim = noise_dim
         self.batch_size = batch_size
@@ -110,7 +113,7 @@ class Trainer(keras.callbacks.Callback):
     def on_batch_end(self, batch, logs=None):
         LOGTIME = 500
         if self.counter % LOGTIME == 0:
-            loss: float = self.testTrain()
+            loss: float = self.getLoss_Cross()
             # loss = logs.get('loss')
             self.losses.append(loss)
             self.counter = 0
@@ -134,7 +137,7 @@ class Trainer(keras.callbacks.Callback):
         plt.grid(True, color='k')
         plt.show()
 
-    def testTrain(self) -> float:
+    def getLoss_IS(self) -> float:
         # 生成噪声，并利用噪声生成流量
         noise = np.random.randn(self.batch_size, self.noise_dim)
         generated_traffic = self.g_model.predict(noise)
@@ -160,6 +163,18 @@ class Trainer(keras.callbacks.Callback):
         # print(loss)
         return loss
 
+    def getLoss_Cross(self) -> float:
+        # 计算输入噪声与还原噪声之间的交叉熵
+        noise = tf.random.normal(shape=(self.batch_size, self.noise_dim))
+        traffic_generated = self.g_model(noise)
+        restore_noise = self.e_model(traffic_generated)
+        loss = tf.reduce_mean(
+            tf.nn.softmax_cross_entropy_with_logits(logits=restore_noise, labels=noise)
+        )
+        loss = loss.numpy()
+        print(loss)
+        return loss
+
 
 def train():
     noise_dim: int = NOISE_DIM
@@ -177,7 +192,7 @@ def train():
 
         trafficGAN = createTrafficGAN(g_model, e_model, traffic_dim, noise_dim)
         trafficGAN.load_weights(MODELPATH)
-        trainner = Trainer(trafficGAN, g_model, classifer_model, noise_dim)
+        trainner = Trainer(trafficGAN, g_model, e_model, classifer_model, noise_dim)
         trafficGAN.fit_generator(dataGenerator.gan_iter(), steps_per_epoch=len(dataGenerator), epochs=10,
                                  callbacks=[trainner])
 
