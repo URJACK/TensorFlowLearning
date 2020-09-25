@@ -66,10 +66,12 @@ def use():
     e_model = tgan.createTrafficGANEncoder(traffic_dim, noise_dim)
     trafficGAN = tgan.createTrafficGAN(g_model, e_model, traffic_dim, noise_dim)
     trafficGAN.load_weights(tgan.MODELPATH)
+    g_model.summary()
+    e_model.summary()
     # 正态分布噪声
-    # noise = np.random.randn(1, noise_dim)
+    noise = np.random.randn(1, noise_dim)
     # 随机分布噪声
-    noise = np.random.uniform(size=(1, noise_dim), low=-1, high=1)
+    # noise = np.random.uniform(size=(1, noise_dim), low=-1, high=1)
     # 一半0.5 一半0.6的噪声
     # dz = np.ones((1, noise_dim // 2), dtype=np.float)
     # dz2 = np.ones((1, noise_dim // 2), dtype=np.float)
